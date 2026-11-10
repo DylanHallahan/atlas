@@ -1,0 +1,16 @@
+{
+  "dbt": true,
+  "nodes": {
+    "monthly_total": { "kind": "changed", "gained": ["new_input"], "lost": ["old_input"] },
+    "new_input": { "kind": "model" },
+    "old_input": { "kind": "model" },
+    "steady_input": { "kind": "model" }
+  },
+  "edges": [
+    ["new_input", "monthly_total", "gained"],
+    ["old_input", "monthly_total", "lost"],
+    ["steady_input", "monthly_total", ""]
+  ],
+  "schema": [],
+  "unreadable": []
+}

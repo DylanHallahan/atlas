@@ -1,0 +1,19 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Compile
+        run: python -m compileall -q .
+      - name: Test
+        # Exit code 5 means no tests were collected, which holds until the first code lands.
+        run: python -m unittest discover -v || [ $? -eq 5 ]

@@ -1,0 +1,171 @@
+/* Atlas: the terminal view (spec 2026-10-31-terminal-view), in the office's popup and as an agent's own tab.
+   The terminal is dark in both themes, as the agents' real terminals are. The prototype
+   terminal-prototype/terminal.template.html is the visual reference. */
+
+@font-face {
+  font-family: "Atlas Mono"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/static/fonts/jetbrains-mono-regular-v2304.woff2") format("woff2");
+}
+
+.tv {
+  --tv-bg: #0f1218; --tv-fg: #d6d9df; --tv-bar: #161a22; --tv-rule: #232a36; --tv-muted: #8b93a3;
+  --tv-on: #8fd3a0; --tv-warn: #f2b65a; --team: var(--tv-muted);
+  color-scheme: dark; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  background: var(--tv-bg); color: var(--tv-fg);
+  font: 12px/1.5 "Atlas Mono", ui-monospace, "Cascadia Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* The team colours on the dark terminal. */
+.tv[data-team="chief"] { --team: #b8a27a; }
+.tv[data-team="atlas"] { --team: #7a9fd6; }
+.tv[data-team="forge"] { --team: #8dbb7f; }
+.tv[data-team="forecast"] { --team: #ab92d4; }
+.tv[data-team="orion"] { --team: #6fbab2; }
+
+/* From the office: the window less 24 px, over the scrim. In its own tab: the whole page. */
+.scrim > .tv { width: 100%; height: 100%; border: 1px solid var(--tv-rule); border-radius: 10px; box-shadow: 0 24px 64px rgba(0, 0, 0, .35); }
+.tv-page { margin: 0; background: #0f1218; }
+.tv-page > .tv { position: fixed; inset: 0; }
+
+/* The bar: who on the left, the tools on the right. */
+.tv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 12px; background: var(--tv-bar); border-bottom: 1px solid var(--tv-rule); }
+.tv-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tv-chip { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--team); }
+.tv-name { color: #ffffff; font-size: 13px; overflow-wrap: anywhere; }
+.tv-meta { color: var(--tv-muted); white-space: nowrap; }
+.tv-meta .is-working { color: var(--tv-on); }
+.tv-meta .is-blocked, .tv-meta .is-gone { color: var(--tv-warn); }
+.tv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.tv-btn { all: unset; flex: none; padding: 3px 10px; border: 1px solid #2f3846; border-radius: 999px; color: #c8ccd4; white-space: nowrap; cursor: pointer; }
+.tv-btn:hover { background: #1e2430; }
+.tv-btn.is-on { background: #26324a; border-color: #3f5480; color: #ffffff; }
+.tv-btn:focus-visible { outline: 2px solid #7aa7ff; outline-offset: 1px; }
+.tv-find { display: flex; flex: none; align-items: center; gap: 6px; padding: 2px 10px; border: 1px solid #2f3846; border-radius: 999px; }
+.tv-find:focus-within { border-color: #7aa7ff; }
+.tv-find input { all: unset; width: 140px; color: #ffffff; }
+.tv-find input::placeholder { color: #6c7486; }
+.tv-count { color: var(--tv-muted); white-space: nowrap; }
+.tv-count:empty { display: none; }
+/* Find's own Prev and Next, for its matches; shown once there is something to find. */
+.tv-btn.tv-step { display: none; padding: 0 4px; border: 0; color: var(--tv-muted); }
+.tv-find.has-query .tv-btn.tv-step { display: inline; }
+.tv-btn.tv-step:hover { background: none; color: #ffffff; }
+/* Screen | History: two halves of one pill. */
+.tv-views { display: flex; flex: none; border: 1px solid #2f3846; border-radius: 999px; overflow: hidden; }
+.tv-views .tv-btn { border: 0; border-radius: 0; }
+
+/* The screen: the agent's own layout at its real width, scrolling inside the view; Wrap folds it to the view. */
+.tv-body { position: relative; display: flex; flex: 1; min-height: 0; }
+/* overflow-anchor: none, because the view keeps its own place when held (term.js render). */
+.tv-screen { position: relative; flex: 1; min-width: 0; overflow: auto; overflow-anchor: none; padding: 10px 14px 16px; font-size: 13px; line-height: 1.32; tab-size: 8; }
+/* The screen keeps focus on load; its ring is quiet. Blue stays on the buttons and find. */
+.tv-screen:focus-visible { outline: 1px solid #3a4150; outline-offset: -1px; }
+.tv-lines { width: max-content; min-width: 100%; }
+.tv-ln { min-height: 1lh; white-space: pre; }
+.tv.is-wrap .tv-lines { width: auto; }
+.tv.is-wrap .tv-ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* With Wrap on, a line of box-drawing rules stays one line, cut at the screen's edge, so it never wraps into a stack. */
+.tv.is-wrap .tv-ln.is-rule { white-space: pre; overflow: hidden; }
+.tv-empty { margin: 0; color: var(--tv-muted); }
+.tv mark { border-radius: 2px; background: var(--tv-warn); color: #1c1a16; }
+.tv mark.is-current { outline: 2px solid #ffffff; }
+.tv-latest { position: absolute; right: 16px; bottom: 12px; }
+
+/* History (spec 2026-10-31-history-and-fit): the transcript as a conversation, newest at the bottom, in one column. */
+.tv-screen[hidden], .tv-history[hidden], .tv-btn.tv-earlier[hidden] { display: none; }
+.tv-history { flex: 1; min-width: 0; overflow: auto; overflow-anchor: none; padding: 0 14px 16px; font-size: 13px; line-height: 1.45; }
+.tv-history:focus-visible { outline: 1px solid #3a4150; outline-offset: -1px; }
+.tv-btn.tv-earlier { display: inline-block; margin: 10px 0 14px; }
+/* History's head stays at the top: Replies only, and the clay line for a question waiting in the terminal. */
+.tv-hhead { position: sticky; top: 0; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 -14px; padding: 8px 14px; background: var(--tv-bg); }
+.tv-wait { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 10px; border-radius: 8px; background: #3a2a22; color: #e8b49a; }
+.tv-wait[hidden] { display: none; }
+/* Replies keep a readable measure on the left; his own cards sit at the right edge. */
+.tv-item:not(.is-mine) .tv-item-text { max-width: 120ch; }
+.tv-item { margin: 0 0 14px; }
+.tv-item-head { color: var(--tv-muted); font-size: 12px; }
+.tv-item-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tv-item.is-in .tv-item-text { padding-left: 10px; border-left: 2px solid var(--team); color: #ffffff; }
+.tv-item.is-tool { display: flex; gap: 10px; margin-bottom: 6px; color: var(--tv-muted); }
+.tv.is-replies .tv-item.is-tool { display: none; }
+/* His own lines: on the right at three-quarters width, in a soft card. */
+.tv-item.is-mine { width: 75%; margin-left: auto; padding: 8px 12px; border-radius: 8px; background: #1b2230; box-sizing: border-box; }
+.tv-item.is-mine .tv-item-text { padding-left: 0; border-left: 0; }
+.tv-item.is-tool .tv-item-head { flex: none; }
+.tv-latest .tv-btn { background: #26324a; border-color: #3f5480; color: #ffffff; }
+
+/* The status line. */
+.tv-status {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; min-height: 26px; padding: 4px 12px;
+  background: var(--tv-bar); border-top: 1px solid var(--tv-rule); color: var(--tv-muted); font-variant-numeric: tabular-nums;
+}
+.tv-status .is-on { color: var(--tv-on); }
+.tv-status .is-warn { color: var(--tv-warn); }
+.tv-status .tv-right { margin-left: auto; }
+.tv-narrow { display: none; }
+
+/* The message box (type.js), for Dylan only: open under the screen or History, its left edge in the team's colour. Keys
+   opens the row of keys above it; Type here outlines the screen in clay while keys go to the agent. */
+.tv-type { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: var(--tv-bar); border-top: 1px solid var(--tv-rule); }
+.tv-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.tv-keys[hidden] { display: none; }
+.tv-key { padding: 3px 8px; }
+.tv-box { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px; border: 1px solid #2f3846; border-left: 3px solid var(--team); border-radius: 8px; background: var(--tv-bg); }
+.tv-box:focus-within { border-color: #7aa7ff; border-left-color: var(--team); }
+.tv-to { color: var(--tv-muted); font-size: 12px; overflow-wrap: anywhere; }
+.tv-box textarea { all: unset; box-sizing: border-box; width: 100%; min-height: 1.5em; max-height: 7.5em; overflow-y: auto; color: #ffffff; white-space: pre-wrap; overflow-wrap: anywhere; field-sizing: content; }
+.tv-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.tv-send { all: unset; flex: none; padding: 3px 12px; border-radius: 999px; background: #d97757; color: #1c1a16; white-space: nowrap; cursor: pointer; }
+.tv-send:hover { background: #e48a6c; }
+.tv-send:disabled { opacity: .6; cursor: default; }
+.tv-send:focus-visible { outline: 2px solid #7aa7ff; outline-offset: 1px; }
+.tv-msg { flex: 1 1 14ch; min-width: 0; margin: 0; color: var(--tv-warn); overflow-wrap: anywhere; }
+.tv-msg.is-ok { color: var(--tv-muted); }
+.tv-msg:empty { display: none; }
+.tv-type.is-busy { opacity: .7; }
+.tv.is-capturing .tv-screen { outline: 2px solid #d97757; outline-offset: -2px; }
+
+/* Phone: full screen; the name on its own line, then team, state and pane, then one row of tools that scrolls
+   sideways. Copy and Open in tab are hidden: the view is already full screen, and a long press copies. */
+@media (max-width: 809px) {
+  .scrim > .tv { border: 0; border-radius: 0; box-shadow: none; }
+  .tv-who { flex-basis: 100%; }
+  .tv-tools { flex-wrap: nowrap; width: 100%; margin-left: 0; overflow-x: auto; }
+  /* Screen | History on a line of its own above the tools (PR 38 UI review S2): the row breaks after it, and its two
+     buttons draw the pill so it keeps its own width. */
+  .tv-tools:has(.tv-views) { flex-wrap: wrap; }
+  .tv-views { flex-basis: 100%; border: 0; border-radius: 0; overflow: visible; }
+  .tv-views .tv-btn { border: 1px solid #2f3846; }
+  .tv-views .tv-btn:first-child { border-radius: 999px 0 0 999px; }
+  .tv-views .tv-btn:last-child { border-left: 0; border-radius: 0 999px 999px 0; }
+  .tv-find input { width: 96px; }
+  .tv-screen, .tv-history { font-size: 12px; }
+  .tv-wide { display: none; }
+  .tv-narrow { display: inline; }
+  /* The keys above the box, wrapping to a second row so every key is in reach without a swipe. */
+  .tv-type { padding: 6px 8px; }
+  .tv-key, .tv-send, .tv-row .tv-btn { min-height: 32px; padding: 4px 12px; display: inline-flex; align-items: center; box-sizing: border-box; }
+  .tv-box textarea { font-size: 16px; } /* 16 px keeps a phone from zooming into the field */
+}
+
+/* The one agent whose terminal is never shown: the bar's name, team, state, Prev and Next, and a line. */
+.tv-private { padding: 16px 12px; }
+.tv-private a { color: #e0a98a; }
+.tv-private[hidden] { display: none; }
+.tv:not(.is-private) .tv-private { display: none; }
+.tv.is-private :is(.tv-body, .tv-status, .tv-runs, .tv-pane, .tv-views, .tv-find, .tv-copy, .tv-wrap) { display: none; }
+
+/* Motion (spec 2026-11-03-motion-pass), on Forge's tokens: only transform and opacity move, and hover colours ease. */
+.tv { --ease-out: cubic-bezier(.22, 1, .36, 1); --dur-1: 140ms; --dur-2: 240ms; }
+@keyframes fade { from { opacity: 0; } }
+.tv-btn, .tv-send { transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.tv-btn:active:not(:disabled), .tv-send:active:not(:disabled) { transform: scale(.98); }
+.tv-screen:not([hidden]), .tv-history:not([hidden]), .tv-item.is-new, .tv-msg.is-ok { animation: fade var(--dur-1) var(--ease-out); }
+/* Screen | History: on a wide screen one pill slides under the two halves; on a phone each button keeps its own fill. */
+@media (min-width: 810px) {
+  .tv-views { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .tv-views::before { content: ""; position: absolute; inset: 0 50% 0 0; background: #26324a; transition: transform var(--dur-2) var(--ease-out); }
+  .tv-views:has(.tv-btn:last-child.is-on)::before { transform: translateX(100%); }
+  .tv-views .tv-btn { position: relative; text-align: center; }
+  .tv-views .tv-btn.is-on { background: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

@@ -1,0 +1,37 @@
+/* Atlas: /usage, each Claude account's limit windows. Tokens, bar and type come from home.css. */
+.usage h1 { font-size: 36px; }
+.usage .cards { display: grid; gap: 16px; margin-top: 24px; }
+.acct { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px 16px; }
+.acct h2 { margin: 0; font: 600 17px/1.3 var(--sans); letter-spacing: -0.01em; }
+.win { margin-top: 16px; }
+.win-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.win-name { font-weight: 500; }
+.win-pct { font-variant-numeric: tabular-nums; font-weight: 500; }
+.bar-track { margin-top: 6px; height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: var(--ink-3); }
+.win-note { margin-top: 5px; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.win.hot .win-pct, .win.hot .win-flag { color: var(--clay); }
+.win.hot .bar-fill { background: var(--clay); }
+.win-flag { font-weight: 500; }
+.read { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.unk { margin: 12px 0 0; color: var(--ink-2); }
+.win.old { opacity: .55; }
+.win.old .bar-fill, .win.old.hot .bar-fill { background: var(--ink-3); }
+.win.old.hot .win-pct, .win.old.hot .win-flag { color: var(--ink-3); }
+@media (max-width: 640px) { .usage h1 { font-size: 30px; } .acct { padding: 16px; } }
+/* Live agents and worktrees: the account cards' card style; a section head in ink-3 small type, as "Needs you" on home. */
+.usage .fleet { display: grid; gap: 16px; margin-top: 16px; }
+.sect { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px 16px; }
+.sect-head { margin: 0 0 6px; font: 500 13px/1.4 var(--sans); color: var(--ink-3); }
+.arow, .wrow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.sect-head + .arow, .sect-head + .wrow { border-top: 0; }
+.alabel { font-weight: 500; }
+.acount { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.anames, .wline { flex: 1 1 100%; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
+.anames a { color: var(--ink-2); margin-right: 6px; }
+.wline { font-variant-numeric: tabular-nums; }
+.stale { color: var(--clay); }
+.sect .quiet { margin: 8px 0 0; font-size: 13px; color: var(--ink-3); }
+@media (min-width: 900px) { .anames, .wline { flex: 1 1 0; min-width: 0; } }
+@media (max-width: 640px) { .sect { padding: 16px; } }
+.anames a { white-space: nowrap; }

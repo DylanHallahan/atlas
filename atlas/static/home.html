@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Atlas</title>
+<link rel="stylesheet" href="/static/home.css">
+<!-- term.js for the peek's renderer, app.js for the office's helpers (its office runs only on /office). -->
+<script src="/static/poll.js" defer></script>
+<script src="/static/md.js" defer></script>
+<script src="/static/asks.js" defer></script>
+<script src="/static/type.js" defer></script>
+<script src="/static/term.js" defer></script>
+<script src="/static/app.js" defer></script>
+<script src="/static/mascot.js" defer></script>
+<script src="/static/home.js" defer></script>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+<header class="bar"><span class="brand"><img src="/static/globe.svg" alt="" width="22" height="22">Atlas</span><nav class="tabs" aria-label="Pages"><a href="/" aria-current="page">Home</a><a href="/standup">Stand-up</a><a href="/office">Org chart</a><a href="/agents">Agents</a><a href="/teams">Teams</a><a href="/review">Review</a><a href="/usage">Usage</a><a href="/work">Work</a></nav><span class="live" id="live" role="status"></span></header>
+<main class="page" id="home"><p class="quiet">Reading the teams…</p></main>
+<!-- One sheet for an ask and for an agent's peek: a panel at the right on wide screens, from the bottom on a phone. -->
+<div class="scrim" id="scrim" hidden><aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Details" tabindex="-1"></aside></div>
+</body>
+</html>

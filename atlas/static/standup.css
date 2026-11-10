@@ -1,0 +1,28 @@
+/* Stand-up uses home's paper, cards, tokens and team colours; only the card's lists are new. */
+.su-page { max-width: 1400px; padding-top: 20px; }
+.su-page .sub { margin-top: 8px; font-size: 15px; }
+.clay { color: var(--clay); }
+.su-team { margin: 16px 0 0; padding: 18px 22px 14px; border-radius: 16px; border-left: 4px solid var(--tc); }
+.su-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.su-working { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
+.su-counts { margin: 4px 0 0; font-size: 13px; color: var(--ink-3); }
+.su-none { margin: 10px 0 0; font-size: 14px; color: var(--ink-3); }
+.su-lists { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 22px; margin-top: 14px; }
+.su-list { min-width: 0; }
+.su-list h3 { margin: 0 0 8px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.su-list ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.su-row { min-width: 0; }
+.su-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--ink); text-decoration: none; }
+.su-title:hover { text-decoration: underline; }
+.su-meta { margin-top: 2px; font-size: 12px; line-height: 1.45; color: var(--ink-2); }
+.su-meta a { text-underline-offset: 3px; }
+.su-row.you .su-title { color: var(--ink); }
+.su-row.you .su-flag { color: var(--clay); }
+.su-empty { font-size: 13px; color: var(--ink-3); }
+.su-list .su-more { display: inline-flex; align-items: center; min-height: 44px; margin: 0; font-size: 13px; color: var(--ink-3); text-underline-offset: 3px; }
+.su-list .su-more:hover { color: var(--ink); }
+@media (max-width: 1290px) { .su-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .su-team { padding: 16px 16px 8px; }
+  .su-lists { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+}

@@ -1,0 +1,116 @@
+/* Atlas: the Teams page at /office (spec 2026-10-31-org-chart), on the home page's tokens, bar and type (home.css).
+   Top to bottom with square lines only, none crossing a line or a card. Wide: Dylan and the chief centred, then one
+   column per team joined by one bar; inside a column each parent's reports hang off one spine on its left, with a stub
+   to each card. Stacked (a phone, or teams that do not fit at 220 px each): the same tree as one indented column. */
+:root { --wire: #b3ad9d; --gap: 12px; --ind: 22px; --stub: 18px; }
+@media (prefers-color-scheme: dark) { :root { --wire: #7a776d; } }
+
+.org { max-width: 1400px; margin: 0 auto; padding: 16px 24px 96px; }
+.org-head h1 { font: 600 28px/1.2 var(--sans); letter-spacing: -0.02em; }
+.org-head p { margin: 6px 0 0; color: var(--ink-2); }
+.org-head b { font-weight: 500; color: var(--ink); }
+.org-head .you { color: var(--clay); font-weight: 500; }
+
+/* A card: name, role, state and time; the team's colour as a 3 px left edge. */
+.card { display: block; position: relative; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--line);
+  border-left: 3px solid var(--tc, var(--ink-3)); border-radius: 12px; box-shadow: var(--shadow); padding: 8px 12px 9px; min-height: 44px; line-height: 1.45; }
+a.card:hover { border-color: var(--ink-3); border-left-color: var(--tc, var(--ink-3)); }
+.c-kick { display: block; font-size: 12px; font-weight: 600; color: var(--tc); margin-bottom: 2px; }
+.c-name { display: block; font-weight: 500; font-size: 14px; }
+.c-why { display: block; font-size: 12px; color: var(--ink-3); }
+.c-st { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 1px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.c-w { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--ink-2); }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; border: 1.5px solid var(--ink-3); }
+.c-st.is-working .dot { background: var(--green); border-color: var(--green); }
+.c-st.is-working .c-w { color: var(--green); }
+.c-st.is-blocked .dot { background: var(--clay); border-color: var(--clay); }
+.c-st.is-blocked .c-w { color: var(--clay); font-weight: 500; white-space: normal; }
+.c-st.is-unknown .c-w { color: var(--ink-3); }
+.card.dylan { border-left-color: var(--ink); }
+
+/* The legend: the dot states the page shows, and what a tap does. */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 20px; font-size: 13px; color: var(--ink-3); }
+.legend .c-st { margin: 0; font-size: 13px; }
+
+/* Finished workers: one closed group under their parent. */
+.fold { margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.fold summary { cursor: pointer; padding: 8px 12px; min-height: 44px; display: flex; align-items: center; border-radius: 10px; background: var(--soft); }
+.fold-cards { display: grid; gap: 10px; margin-top: 10px; }
+ul.tree > li > .fold { margin-top: 0; }
+
+/* Wide: Dylan and the chief centred, a stem down to one bar, and a stem from the bar to each column's head. */
+.chart { margin-top: 24px; }
+.top { width: 240px; margin: 0 auto; }
+.down { width: 1.5px; height: var(--gap); margin: 0 auto; background: var(--wire); }
+.teams { display: flex; position: relative; }
+.teams::before { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: 1.5px solid var(--wire); }
+.col { flex: 1 1 0; min-width: 0; position: relative; margin-top: 18px; padding: 18px 7px 0; }
+.col::before { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: 1.5px solid var(--wire); }
+.col::after { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: 1.5px solid var(--wire); }
+.col:first-child::after { left: 50%; }
+.col:last-child::after { right: 50%; }
+
+/* Inside a column: each parent's reports on one spine down its left, a stub to each card. */
+ul.tree { list-style: none; margin: 0; padding: 0 0 0 var(--ind); }
+ul.tree > li { position: relative; padding-top: 10px; }
+ul.tree > li::before { content: ""; position: absolute; left: calc(var(--ind) * -1 + 9px); top: 0; bottom: 0; border-left: 1.5px solid var(--wire); }
+ul.tree > li:last-child::before { bottom: auto; height: calc(10px + var(--stub)); }
+ul.tree > li::after { content: ""; position: absolute; left: calc(var(--ind) * -1 + 9px); top: calc(10px + var(--stub)); width: calc(var(--ind) - 9px); border-top: 1.5px solid var(--wire); }
+
+/* Not in the chart: a quiet row under the tree, each card with its reason. */
+.unplaced { margin-top: 36px; }
+.unplaced h2 { margin: 0 0 10px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.out { display: flex; flex-wrap: wrap; gap: 10px; }
+.out .card { width: 240px; }
+
+/* Stacked: one indented column. The teams hang off the chief's spine like any other reports. */
+.chart.is-stacked { --ind: 18px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.chart.is-stacked .top { width: auto; margin: 0; }
+.chart.is-stacked .down { margin: 0 0 0 9px; }
+.chart.is-stacked .teams { display: block; padding: 0 0 0 var(--ind); }
+.chart.is-stacked .teams::before { display: none; }
+.chart.is-stacked .col { margin-top: 0; padding: 10px 0 0; }
+.chart.is-stacked .col::before { left: calc(var(--ind) * -1 + 9px); top: 0; bottom: 0; height: auto; }
+.chart.is-stacked .col:last-child::before { bottom: auto; height: calc(10px + var(--stub)); }
+.chart.is-stacked .col::after { left: calc(var(--ind) * -1 + 9px); right: auto; top: calc(10px + var(--stub)); width: calc(var(--ind) - 9px); }
+.chart.is-stacked .out .card { width: 100%; }
+/* A team's workers with no known parent, stacked: one step in, at the level of the lead's reports, with no line. */
+.chart.is-stacked .unknown { padding-left: var(--ind); }
+
+@media (max-width: 640px) {
+  .org { padding: 12px 16px 72px; }
+  .org-head h1 { font-size: 24px; }
+}
+
+/* RainCLI contacts under raincli-inbox: the agent card exactly, with a muted slate left edge so they read as not ours. */
+:root { --slate: #6b6f8a; }
+@media (prefers-color-scheme: dark) { :root { --slate: #a9adc9; } }
+.card.outside { --tc: var(--slate); }
+.c-held { display: block; margin-top: 1px; font-size: 12px; color: var(--clay); }
+.rain-cards { margin: 0; }
+.rain-cards > summary { cursor: pointer; padding: 8px 12px; min-height: 44px; display: flex; align-items: center; border-radius: 10px; background: var(--soft); font-size: 13px; color: var(--ink-2); }
+.rain-cards .held { color: var(--clay); margin-left: 6px; }
+.rain-cards .none, ul.tree > li > .none { /* the unreachable line */ margin: 0; padding: 8px 12px; font-size: 12px; color: var(--ink-3); }
+.rain-cards > .none { padding: 0 0 8px; }
+.rain-cards > ul.tree { padding-left: var(--ind); }
+
+/* The agent grid at /agents (spec 2026-11-10-agent-grid): the card's fill, line and radius, the team colour as a 3 px left edge, and the
+   terminal's own colours for the screen, dark in both themes. agents.js sizes the grid to the window. */
+.agrid { padding: 0 24px 16px; }
+.g-sum { display: flex; gap: 16px; align-items: center; height: 32px; margin: 0; font-size: 13px; color: var(--ink-3); }
+.grid { display: grid; gap: 8px; }
+.tile { display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; overflow: hidden; padding: 8px; color: inherit; text-decoration: none;
+  background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--tc, var(--line)); border-radius: 6px; line-height: 1.3; }
+.tile.is-blocked { border-color: var(--clay); border-left-color: var(--tc, var(--line)); }
+a.tile:hover { border-color: var(--ink-3); border-left-color: var(--tc, var(--line)); }
+.t-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.t-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink); }
+.tile .c-st { flex: none; margin: 0; flex-wrap: nowrap; font-size: 11px; }
+.tile .c-st.is-idle .c-w { color: var(--ink-3); }
+.t-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--tc, var(--ink-3)); }
+/* .t-scr is only the slot the tile leaves for the screen; the panel is its pre, cut to a whole number of lines (the leftover sits under it). */
+.t-scr { --tv-bg: #0f1218; --tv-fg: #d6d9df; flex: 1 1 0; min-height: 0; margin-top: 4px; container-type: size; color: var(--tv-fg); font: 10px/1.35 var(--mono); }
+.t-scr pre { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; height: calc(round(down, 100cqh - 12px, 1lh) + 12px); margin: 0; padding: 6px; overflow: clip; overflow-clip-margin: content-box; /* a cut line never shows in the padding */
+  background: var(--tv-bg); border-radius: 4px; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.t-scr.is-note { color: #8b93a3; }
+@media (max-width: 640px) { .agrid { padding: 0 16px 16px; } }

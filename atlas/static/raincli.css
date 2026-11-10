@@ -1,0 +1,22 @@
+/* Atlas: a RainCLI thread at /raincli/<conversation id>, read only. The page width and the review page's quiet type. */
+.rain { max-width: 720px; margin: 0 auto; padding: 24px 24px 96px; }
+.rain .quiet { color: var(--ink-3); }
+.rain .back { display: inline-block; font-size: 13px; color: var(--ink-3); text-decoration: none; padding: 10px 0; }
+.rain h1 { margin: 0; font: 600 24px/1.25 var(--sans); letter-spacing: -0.01em; }
+.rain .meta { margin: 6px 0 0; font-size: 13px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.rain .ro { margin: 10px 0 0; font-size: 13px; color: var(--ink-2); }
+.dotw { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.dotw i { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.dotw.is-ready { color: var(--green); } .dotw.is-ready i { background: var(--green); border-color: var(--green); }
+.rain .line { margin: 14px 0 0; font-size: 14px; color: var(--clay); }
+.msgs { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+.msg { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--slate); border-radius: 12px; padding: 10px 14px 12px; box-shadow: var(--shadow); }
+.msg.us { border-left-color: var(--ink-3); }
+.mh { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.mh b { font-weight: 600; color: var(--ink); font-size: 13px; }
+.chip { font-size: 12px; font-weight: 500; padding: 1px 9px; border-radius: 999px; background: var(--soft); color: var(--ink-2); }
+.chip.held { background: var(--clay-soft); color: var(--clay); }
+.mt { margin: 6px 0 0; white-space: pre-wrap; font-size: 14px; }
+.files { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); }
+.foot-line { margin: 28px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+.foot-line.held { color: var(--clay); }

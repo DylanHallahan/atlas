@@ -1,0 +1,626 @@
+#!/usr/bin/env python3
+"""work: keep your work as item files. One file per item in your team's items folder (structure.toml `items`), id
+<team>:<slug>. Commands: add, move, note, answer, close, mine, stale, show, brief, ask. It writes only your own team's items
+folder (and brief's own brief file), never touches the Atlas service or its database, and stamps every time from the
+clock. A write takes a lock, writes a temporary file and renames it over the item. Run `work <command> -h`."""
+import argparse
+import fcntl
+import json
+import os
+import re
+import stat
+import subprocess
+import sys
+from contextlib import contextmanager
+from datetime import UTC, datetime
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+from atlas import items as I  # noqa: E402
+from atlas.structure import Structure, expand  # noqa: E402
+from atlas.files import open_dir  # noqa: E402
+
+OPEN = ("todo", "doing", "waiting")  # the states work writes to; backlog is only read
+PLAIN = {"type", "status", "updated", "theirs"}
+DONE_NOTE = re.compile(r"\.md\b|github\.com/[\w.-]+/[\w.-]+/pull/\d+|\b[\w.-]+#\d+")
+SLUG = re.compile(r"[\w][\w.-]*")
+CORE = {"type", "owner", "status", "next", "waiting_on", "default", "updated", "parent", "links", "theirs", "closed_note", "proof", "stands"}
+
+
+class Refuse(Exception):
+    pass
+
+
+def structure():
+    s = Structure(os.environ.get("WORK_STRUCTURE") or REPO / "structure.toml")
+    try:
+        s.data = I.read_structure(s.path)
+    except (OSError, ValueError) as e:
+        raise Refuse(f"cannot read {s.path}: {e}")
+    return s
+
+
+def caller(a):
+    if a.as_:
+        return a.as_
+    pane = os.environ.get("HERDR_PANE_ID")
+    if pane:
+        try:
+            out = subprocess.run(["herdr", "agent", "get", pane], capture_output=True, text=True, timeout=10, check=True)
+            return json.loads(out.stdout)["result"]["agent"]["name"]
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError):
+            pass
+    if os.environ.get("HC_TERMINAL_ID"):
+        try:  # the result carries argv, which can hold the environment: keep .name only
+            out = subprocess.run(["hc", "get", os.environ["HC_TERMINAL_ID"], "--json"], capture_output=True, text=True, timeout=10, check=True)
+            got = json.loads(out.stdout)
+            return (got.get("terminal") or got)["name"]
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError):
+            pass
+    raise Refuse("cannot tell which agent this is: run it in an hc terminal or a herdr pane, or pass --as <agent>")
+
+
+def my_team(s):
+    team = s.team_by_folder(os.getcwd())
+    if s.tied:
+        raise Refuse(f"{os.getcwd()} is in the folders of both {' and '.join(s.tied)} in structure.toml: fix structure.toml")
+    if team is None:
+        raise Refuse(f"{os.getcwd()} is in no team's folders in structure.toml: run from your own folder")
+    if team not in I.team_roots(s.data):
+        raise Refuse(f"team {team} has no items folder in structure.toml")
+    return team
+
+
+def everything(s):
+    """{id: items row} of every team's items folder, read only."""
+    out = {}
+    for team, root in I.team_roots(s.data).items():
+        try:
+            found, _ = I.entries(root)
+        except OSError:
+            continue
+        for name, _ in found:
+            try:
+                text, _ = I.load(root, name)
+            except (OSError, ValueError):
+                continue
+            row, _ = I.row_of(team, name[:-3], text)
+            out[row["id"]] = row
+    return out
+
+
+def split_id(s, id_, team=None):
+    """(team, slug, items folder) of an id; with team, the id must belong to that team."""
+    m = re.fullmatch(r"([a-z0-9][a-z0-9-]*):(\w[\w.-]*)", id_ or "")
+    if not m:
+        raise Refuse(f"{id_!r} is not an item id (<team>:<slug>)")
+    roots = I.team_roots(s.data)
+    if m[1] not in roots:
+        raise Refuse(f"no team {m[1]} with an items folder")
+    if team and m[1] != team:
+        raise Refuse(f"{id_} belongs to team {m[1]}; work writes only your own team's items. Ask its owner")
+    return m[1], m[2], roots[m[1]]
+
+
+@contextmanager
+def lock(d):
+    """Create/open each directory without following links, and retain it through the write."""
+    if not os.path.isabs(d):
+        raise Refuse("write directory must be absolute")
+    directory = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in Path(d).parts[1:]:
+            try:
+                os.mkdir(part, dir_fd=directory)
+            except FileExistsError:
+                pass
+            nxt = open_dir(part, directory)
+            os.close(directory)
+            directory = nxt
+        fd = os.open(".work.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     0o644, dir_fd=directory)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise Refuse("the work lock is not a regular file")
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield directory
+        finally:
+            os.close(fd)
+    finally:
+        os.close(directory)
+
+
+def put(d, name, text, new=False):
+    """Write relative to the held directory descriptor; new destinations must not exist."""
+    if not re.fullmatch(r"[\w][\w.-]*\.md", name):
+        raise Refuse("invalid file name")
+    tmp = f".tmp-{os.getpid()}-{name}"
+    mode = 0o644 if new else os.stat(name, dir_fd=d, follow_symlinks=False).st_mode & 0o777
+    try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode, dir_fd=d)
+    except FileExistsError:
+        raise Refuse("temporary file already exists")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            os.fchmod(f.fileno(), mode)
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        if new:
+            os.link(tmp, name, src_dir_fd=d, dst_dir_fd=d, follow_symlinks=False)
+        else:
+            os.rename(tmp, name, src_dir_fd=d, dst_dir_fd=d)
+    finally:
+        try:
+            os.unlink(tmp, dir_fd=d)
+        except FileNotFoundError:
+            pass
+
+
+def render(key, v):
+    shown = str(v).lower() if isinstance(v, bool) else v if key in PLAIN else json.dumps(v, ensure_ascii=False)
+    if isinstance(shown, str):  # the reader splits lines at these too
+        shown = shown.replace("\x85", "\\u0085").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    return [f"{key}: {shown}"]
+
+
+def setkey(fm, key, v):
+    """Set a frontmatter key (None removes it). A key left alone keeps its lines exactly as written."""
+    i = next((i for i, (k, _) in enumerate(fm) if k == key), None)
+    if v is None:
+        if i is not None:
+            del fm[i]
+    elif i is None:
+        fm.append((key, render(key, v)))
+    else:
+        fm[i] = (key, render(key, v))
+
+
+def build(fm, body):
+    return "---\n" + "".join(l + "\n" for _, raw in fm for l in raw) + "---\n" + "".join(l + "\n" for l in body)
+
+
+def dated(who, text):
+    return f"- {I.stamp()[0]}, {who}: {text}"
+
+
+def slugify(title):
+    s = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60].strip("-")
+    return s or "item"
+
+
+def check_wait(s, status, waiting_on, default):
+    if waiting_on and I.ID.fullmatch(waiting_on) and waiting_on not in everything(s):
+        raise Refuse(f"waiting_on item {waiting_on} does not exist")
+    if status != "waiting":
+        return
+    if not waiting_on:
+        raise Refuse("waiting needs --waiting-on (an agent, Dylan, or an item id)")
+    if I.waits_on_dylan(waiting_on):
+        if not default:
+            raise Refuse('waiting on Dylan needs --default "Holds." or "Goes ahead: <letter and what happens>, <when>."')
+        if default != "Holds." and not re.fullmatch(r"Goes ahead: [A-Z]\b.+, \S.+", default):
+            raise Refuse('--default must be "Holds." or "Goes ahead: <letter and what happens>, <when>."')
+
+
+def check_parent(s, pid, own=None):
+    """The parent row; items nest one level, and an item with children cannot become a child."""
+    split_id(s, pid)
+    rows = everything(s)
+    if pid == own:
+        raise Refuse("an item cannot be its own parent")
+    p = rows.get(pid)
+    if p is None:
+        raise Refuse(f"parent {pid} does not exist")
+    if I.parent_id(p["parent"]):
+        raise Refuse(f"parent {pid} is itself a child of {p['parent']}; items nest one level")
+    if own and any(r["parent"] == own for r in rows.values()):
+        raise Refuse(f"{own} has children and cannot become a child")
+    return p
+
+
+def extras(pairs):
+    """[(key, value)] from --set key=value arguments; core keys and odd names are refused."""
+    out = []
+    for p in pairs or ():
+        k, eq, v = p.partition("=")
+        if not eq:
+            raise Refuse(f"--set takes key=value, not {p!r}")
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", k):
+            raise Refuse(f"--set key {k!r} must be a lower-case name: letters, digits and _")
+        if k in CORE:
+            raise Refuse(f"--set cannot write {k}; use the command's own option")
+        out.append((k, v))
+    return out
+
+
+def create(s, a, who, team, title, owner, nxt, status="todo", waiting_on="", default="", parent="", links=(), theirs=False,
+           write_with=None, more=()):
+    """Optionally wrap the locked item write with a brief publication using its selected id."""
+    if not owner or not nxt:
+        raise Refuse("an item needs an owner and a next action")
+    if status not in OPEN:
+        raise Refuse(f"a new item starts as one of {', '.join(OPEN)}")
+    check_wait(s, status, waiting_on, default)
+    if parent:
+        check_parent(s, parent)
+    _, now = I.stamp()
+    fm = []
+    for k, v in (("type", "item"), ("owner", owner), ("status", status), ("next", nxt), ("waiting_on", waiting_on or None),
+                 ("default", default or None), ("updated", now), ("parent", parent or ""), ("links", list(links)),
+                 ("theirs", True if theirs else None)):
+        setkey(fm, k, v)
+    for k, v in more:
+        setkey(fm, k, v)
+    body = [f"# {title}", "", dated(who, "added")]
+    d = I.team_roots(s.data)[team]
+    with lock(d) as directory:
+        base, n = slugify(title), 1
+        while True:
+            slug = base if n == 1 else f"{base}-{n}"
+            try:
+                def write_item():
+                    put(directory, slug + ".md", build(fm, body), new=True)
+                if write_with is None:
+                    write_item()
+                else:
+                    write_with(f"{team}:{slug}", write_item)
+                return f"{team}:{slug}"
+            except FileExistsError:
+                n += 1
+
+
+def edit(s, who, team, id_, change):
+    """Read the item under the lock, let change(fm, vals, body, rows) alter it, stamp updated, rename it over the file."""
+    _, slug, d = split_id(s, id_, team)
+    with lock(d) as directory:
+        try:
+            text, _ = I.load(d, slug + ".md", dir_fd=directory)
+        except (OSError, ValueError) as e:
+            raise Refuse(f"cannot read {id_}: {getattr(e, 'strerror', None) or e}")
+        p = I.parse(text)
+        if p["error"]:
+            raise Refuse(f"{id_} cannot be parsed ({p['error']}); fix the file by hand")
+        change(p["fm"], p["vals"], p["body"], everything(s))
+        setkey(p["fm"], "updated", I.stamp()[1])
+        put(directory, slug + ".md", build(p["fm"], p["body"]))
+
+
+def open_kids(rows, id_):
+    return [r["id"] for r in rows.values() if r["parent"] == id_ and r["status"] not in I.CLOSED]
+
+
+def close(s, who, team, id_, outcome, note, proof=None, nothing=None):
+    if outcome not in I.CLOSED:
+        raise Refuse("close takes done or dropped")
+    if outcome == "dropped" and (proof or nothing):
+        raise Refuse("--proof and --nothing-to-prove go with close done, not dropped")
+    if outcome == "done":
+        if proof and nothing:
+            raise Refuse("close done takes --proof or --nothing-to-prove, not both")
+        if not (proof or nothing):
+            raise Refuse('close done needs --proof "<the result: what was read, where, when>" or --nothing-to-prove "<reason>"')
+        proof = proof or f"Nothing to prove: {nothing}"
+    if not note:
+        raise Refuse(f"close {outcome} needs --note ({'a report path or a PR link' if outcome == 'done' else 'the reason'})")
+    if outcome == "done" and not DONE_NOTE.search(note):
+        raise Refuse("close done needs a report path or a PR link in --note")
+
+    def change(fm, vals, body, rows):
+        if outcome == "done" and (kids := open_kids(rows, id_)):
+            raise Refuse(f"{id_} has open children ({', '.join(kids)}); close them, or drop one with a reason")
+        for k, v in (("status", outcome), ("waiting_on", ""), ("default", None), ("closed_note", note)):
+            setkey(fm, k, v)
+        if outcome == "done":
+            setkey(fm, "proof", proof)
+        body.append(dated(who, f"closed {outcome}: {note}" + (f"; proof: {proof}" if outcome == "done" else "")))
+    edit(s, who, team, id_, change)
+
+
+def cmd_add(s, a, who, team):
+    if a.waiting_on is not None and a.status not in (None, "waiting"):
+        raise Refuse("add with --waiting-on needs --status waiting, or omit --status")
+    status = a.status if a.status is not None else ("waiting" if a.waiting_on is not None else "todo")
+    print(create(s, a, who, team, a.title, a.owner, a.next, status, a.waiting_on or "", a.default or "", a.parent or "",
+                 a.link or (), more=extras(a.set)))
+
+
+def cmd_ask(s, a, who, team):
+    print(create(s, a, who, team, a.what, a.agent, a.next, "todo", "", "", a.parent or "", a.link or (), theirs=True))
+
+
+def cmd_move(s, a, who, team):
+    if a.waiting_on is not None and a.status != "waiting":
+        raise Refuse("move with --waiting-on needs status waiting")
+    if a.owner is not None and not a.owner:
+        raise Refuse("--owner needs the new owner's name")
+    if a.status in I.CLOSED:
+        if a.set or a.owner:
+            raise Refuse("move to done or dropped takes no --set or --owner; set them in an earlier move")
+        if a.stands:
+            raise Refuse("--stands goes with move to proving")
+        return close(s, who, team, a.id, a.status, a.note, a.proof, a.nothing_to_prove)
+    if a.nothing_to_prove or (a.status != "proving" and (a.proof or a.stands)):
+        raise Refuse("--proof and --stands go with move to proving; --nothing-to-prove with done")
+    if a.status not in OPEN + ("proving",):
+        raise Refuse(f"move takes one of {', '.join(OPEN + ('proving',))} (done and dropped by close; backlog is not written)")
+    if a.parent:
+        check_parent(s, a.parent, a.id)
+    more = extras(a.set)
+
+    def change(fm, vals, body, rows):
+        wait, default = a.waiting_on, a.default
+        if a.status == "waiting" and not wait and vals.get("status") == "waiting":  # already waiting: keep the wait
+            wait, default = vals.get("waiting_on"), default or vals.get("default")
+        check_wait(s, a.status, wait, default)
+        said = ""
+        if a.status == "proving":
+            again = vals.get("status") == "proving"
+            if not again and not (a.proof and a.stands):
+                raise Refuse(f"move to proving needs {' and '.join(f'--{k}' for k in ('proof', 'stands') if not getattr(a, k))}"
+                             ' ("--proof <what will prove it>", "--stands <where it is now>")')
+            for k in ("proof", "stands"):
+                if getattr(a, k):
+                    setkey(fm, k, getattr(a, k))
+                    said += f"; {k}: {getattr(a, k)}"
+        if a.owner and a.owner != vals.get("owner"):
+            said += f"; owner: {vals.get('owner') or 'none'} -> {a.owner}"
+            setkey(fm, "owner", a.owner)
+        for k, v in more:
+            setkey(fm, k, v)
+        setkey(fm, "status", a.status)
+        setkey(fm, "closed_note", None)
+        if a.next:
+            setkey(fm, "next", a.next)
+        setkey(fm, "waiting_on", wait or "")
+        setkey(fm, "default", default or None)
+        if a.parent:
+            setkey(fm, "parent", a.parent)
+        body.append(dated(who, f"moved to {a.status}" + (f": {a.note}" if a.note else "") + said))
+    edit(s, who, team, a.id, change)
+
+
+def cmd_note(s, a, who, team):
+    edit(s, who, team, a.id, lambda fm, vals, body, rows: body.append(dated(who, a.line)))
+
+
+def cmd_answer(s, a, who, team):
+    """Record Dylan's answer to an ask as one trail line: his words as received, then the Effect sentence. An item
+    waiting on Dylan moves to doing, with the wait cleared and next set to act on the answer."""
+    from atlas.web import answer_on_items, answer_letter  # the reader's own rule decides what counts as an answer
+    teams = answer_on_items(s.data)
+    if a.id.partition(":")[0] not in teams:
+        raise Refuse(f"answers are recorded on items only for teams with an items folder ({', '.join(teams)}); {a.id} is in another team")
+    words, effect = " ".join(a.words.split()), " ".join(a.effect.split())
+    if not answer_letter(words, a.ask):
+        raise Refuse(f'--words must hold "({a.ask}): <letter>." or "({a.ask}): Something else." exactly as Dylan\'s line arrived')
+    if not effect.startswith("Effect:") or len(effect) < 9:
+        raise Refuse('--effect must be one sentence starting "Effect:"')
+    line = f'Dylan answers the ask: "{words}" {effect}'
+    if answer_letter(line, a.ask) != answer_letter(words, a.ask):
+        raise Refuse("--effect must not give another letter for the ask")
+    moved = []
+
+    def change(fm, vals, body, rows):
+        body.append(dated(who, line))
+        if vals.get("status") == "waiting" and I.waits_on_dylan(vals.get("waiting_on")):
+            for k, v in (("status", "doing"), ("waiting_on", ""), ("default", None),
+                         ("next", f"Act on Dylan's answer ({a.ask}): {answer_letter(words, a.ask)}")):
+                setkey(fm, k, v)
+            moved.append(1)
+    edit(s, who, team, a.id, change)
+    if moved:
+        print(f"{a.id} moved to doing, no longer waiting on Dylan; if another ask on this item is still open, move it back to waiting")
+
+
+def cmd_close(s, a, who, team):
+    close(s, who, team, a.id, a.outcome, a.note, a.proof, a.nothing_to_prove)
+
+
+def age(updated, now):
+    at = I.moment(updated)
+    if at is None:
+        return "?"
+    m = int((now - at).total_seconds() // 60)
+    return f"{m}m" if m < 60 else f"{m // 60}h" if m < 2880 else f"{m // 1440}d"
+
+
+def line(r, now, owner=False):
+    flag = " stale" if I.stale(r["status"], r["updated"], r["waiting_on"], r["waiting_default"], now) else ""
+    head = f"{r['id']} {r['status']} {age(r['updated'], now)}{flag}" + (f" {r['owner']}" if owner else "")
+    nxt = " ".join(r["next"].split())
+    room = max(110 - len(head) - 1, 0)
+    return head + (" " + (nxt if len(nxt) <= room else nxt[:max(room - 3, 0)] + "...") if room > 10 and nxt else "")
+
+
+def ordered(rows, now):
+    order = {"doing": 0, "waiting": 1, "proving": 2, "todo": 3, "backlog": 4}
+    return sorted(rows, key=lambda r: (not I.stale(r["status"], r["updated"], r["waiting_on"], r["waiting_default"], now),
+                                       order.get(r["status"], 9), r["updated"] or ""))
+
+
+def cmd_mine(s, a, who, team):
+    now = datetime.now(UTC)
+    mine = ordered([r for r in everything(s).values() if r["owner"] == who and r["status"] in I.LIMITS], now)
+    if not mine:
+        return print("no open items")
+    cap = len(mine) if a.all or len(mine) <= 15 else 14
+    for r in mine[:cap]:
+        print(line(r, now))
+    if cap < len(mine):
+        print(f"+{len(mine) - cap} more: work mine --all")
+
+
+def cmd_stale(s, a, who, team):
+    now = datetime.now(UTC)
+    key = a.team or team
+    if key not in I.team_roots(s.data):
+        raise Refuse(f"no team {key} with an items folder")
+    rows = [r for r in everything(s).values() if r["team"] == key and I.stale(
+        r["status"], r["updated"], r["waiting_on"], r["waiting_default"], now)]
+    for r in ordered(rows, now):
+        print(line(r, now, owner=True))
+    if not rows:
+        print("no stale items")
+
+
+def cmd_show(s, a, who, team):
+    key, slug, d = split_id(s, a.id)
+    try:
+        text, _ = I.load(d, slug + ".md")
+    except (OSError, ValueError) as e:
+        raise Refuse(f"cannot read {a.id}: {getattr(e, 'strerror', None) or e}")
+    print(text, end="" if text.endswith("\n") else "\n")
+    kids = [r for r in everything(s).values() if r["parent"] == a.id]
+    for r in kids:
+        print(f"child {r['id']} {r['status']} {r['owner']}")
+
+
+def cmd_brief(s, a, who, team):
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", a.worker):
+        raise Refuse("worker must contain only letters, digits, underscores or hyphens")
+    split_id(s, a.item)
+    item = everything(s).get(a.item)
+    if item is None:
+        raise Refuse(f"parent {a.item} does not exist")
+    parent = I.parent_id(item["parent"])
+    if parent:
+        split_id(s, a.item, team)
+    reports = s.data["teams"][team].get("reports")
+    if not isinstance(reports, str) or not reports:
+        raise Refuse(f"team {team} has no reports folder in structure.toml, so no briefs folder")
+    briefs = os.path.join(os.path.dirname(os.path.normpath(expand(reports))), "briefs")
+    now = datetime.now(UTC)
+    stamp, _ = I.stamp(now)
+    day = stamp[:10]
+    base = f"{day}-{a.worker}-brief"
+    title = a.title or f"{item['title']} ({a.worker})"
+    with lock(briefs) as directory:
+        n = 1
+        while True:
+            name = f"{base}.md" if n == 1 else f"{base}-{n}.md"
+            try:
+                os.stat(name, dir_fd=directory, follow_symlinks=False)
+            except FileNotFoundError:
+                break
+            n += 1
+        path = os.path.join(briefs, name)
+
+        def write_with_brief(child, write_item):
+            weekday = now.astimezone(I.ET).strftime("%a %m-%d %-I:%M %p ET") + " " + stamp[stamp.index("("):]
+            text = (f"# Brief: {title}\n\nFrom `{who}` to `{a.worker}`, {weekday}. Parent: `{who}`.\nItem: {child}\n"
+                    f"Parent item: {parent}\n\n## Outcome\n\n## Scope\n\n## Checks\n\n## Stop condition\n\n"
+                    f"## Report\nWrite the report with `Item: {child}` in its header, then end with the one-line worker report.\n")
+            try:
+                put(directory, name, text, new=True)
+            except FileExistsError:
+                # Only an item collision should trigger create's next-id retry.
+                raise Refuse(f"{path} exists already")
+            try:
+                write_item()
+            except BaseException:
+                os.unlink(name, dir_fd=directory)
+                raise
+
+        if parent:
+            child = a.item
+            write_with_brief(child, lambda: edit(s, who, team, child, lambda fm, vals, body, rows:
+                             body.append(dated(who, f"briefed {a.worker}: {path}"))))
+        else:
+            parent = a.item
+            child = create(s, a, who, team, title, a.worker, f"Carry out the brief at {path}", "doing", parent=parent,
+                           links=[path], write_with=write_with_brief)
+    print(child)
+    print(path)
+
+
+def main():
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--as", dest="as_", metavar="AGENT", help="the calling agent, when not in a herdr pane")
+    ap = argparse.ArgumentParser(prog="work", description=__doc__.split("\n\n")[0],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog='''When to run what (examples):
+  After restart or compaction, read your open items: work mine
+  Start new work with an owner and a next action: work add "Work CLI guide" --owner atlas-lead --next "Draft the guide"
+  On a status change: work move atlas:work-cli-guide doing --next "Check the examples"
+  Record progress: work note atlas:work-cli-guide "Examples checked in scratch"
+  At the merge: work move atlas:work-cli-guide proving --proof "AR totals on prod match" --stands "On dev"
+  Finish with a report path or PR link and the proof: work close atlas:work-cli-guide done --note "records/reports/work-cli-guide.md" --proof "read prod totals, 10:05 AM ET"
+  Waiting on Dylan, with the ask block's Default line: work move atlas:work-cli-guide waiting --waiting-on Dylan --default "Holds."
+  A lead briefing a worker: work brief atlas-writer --item atlas:work-cli-guide
+  Asking another agent: work ask atlas-product-lead "Review the guide" --next "Check the wording"
+  Leads, find your team's stale open items: work stale
+
+Run from your own team's folder. Outside a Herdr pane, add --as AGENT after the subcommand.
+Until the PATH install, call ~/teams/atlas/deploy-dev/bin/work in place of work.
+Use the returned item id in later commands. The examples use atlas:work-cli-guide.
+When taking a brief, reuse its Item: id. Workers never run add for that work.
+move takes todo, doing, waiting or proving, and --owner hands the item on. close takes done, with a report path or PR link and --proof or --nothing-to-prove, or dropped, with the reason.
+proving is merged work not yet proved where its user gets it: move ID proving --proof "<what will prove it>" --stands "<where it is now>".
+--waiting-on sets the status to waiting. Write the wait as "who: what (since when)", or an item id.
+It counts as waiting on Dylan when who is Dylan. A waiting item keeps its wait when --waiting-on is left out.
+Waiting on Dylan also needs --default: "Holds." or "Goes ahead: <letter and what happens>, <when>.".
+brief writes a brief skeleton and its child item. Fill in the brief before you start the worker.
+ask records an item. Neither command sends. Send them yourself: the ask by SendMessage to that agent,
+and the brief by starting the worker on it.
+Every brief, report, ask report and PR description carries Item: <id> in its header, next to the From line;
+that line is how asks and reports join an item.
+--link is stored exactly as given: quote a value to keep ~ or [[...]].
+--set key=value, on add and move, writes your own frontmatter key; core keys are refused and other keys stay.
+stale lists your team's open items untouched past their limit: 4 hours doing, 24 hours todo or waiting, 3 days proving.''')
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def cmd(name, fn, help_, *args):
+        p = sub.add_parser(name, parents=[common], help=help_, description=help_)
+        for flags, kw in args:
+            p.add_argument(*flags, **kw)
+        p.set_defaults(fn=fn)
+
+    wait = [(("--waiting-on",), {"help": 'write "who: what (since when)", or an item id; it counts as waiting on Dylan when who is Dylan'}),
+            (("--default",), {"help": 'when waiting on Dylan: "Holds." or "Goes ahead: <letter and what happens>, <when>."'})]
+    nxt = (("--next",), {"help": "the next action"})
+    link = (("--link",), {"action": "append", "help": "a path or URL, repeatable; stored exactly as given, so quote a value "
+                                                      "to keep ~ or [[...]]"})
+    more = (("--set",), {"action": "append", "metavar": "KEY=VALUE",
+                         "help": "your own frontmatter key, repeatable; core keys are refused"})
+    parent = (("--parent",), {"help": "the parent item id (one level of nesting)"})
+    cmd("add", cmd_add, "create an item", (("title",), {}), (("--owner",), {"help": "required: the item's owner"}),
+        (("--next",), {"help": "required: the next action"}),
+        (("--status",), {"help": "todo, doing or waiting; defaults to waiting with --waiting-on, otherwise todo; "
+                                 "--waiting-on refuses any status other than waiting"}), *wait, parent, link, more)
+    proof = [(("--proof",), {"help": "proving: what will prove it; done: the result (what was read, where, when)"}),
+             (("--nothing-to-prove",), {"help": "done only, instead of --proof: the reason there is nothing to prove"})]
+    cmd("move", cmd_move, "change the status", (("id",), {}), (("status",), {}), nxt, *wait, parent, more, *proof,
+        (("--stands",), {"help": "proving: where the work is now"}),
+        (("--owner",), {"help": "hand the item to this owner; give its current status to keep it"}),
+        (("--note",), {"help": "required for done and dropped"}))
+    cmd("note", cmd_note, "add one dated line", (("id",), {}), (("line",), {}))
+    cmd("answer", cmd_answer, "record Dylan's answer to an ask on an item of any team with an items folder, as one dated line;"
+        " an item waiting on Dylan moves to doing", (("id",), {}),
+        (("--ask",), {"required": True, "help": "the ask id, <team>/<report name>"}),
+        (("--words",), {"required": True, "help": "Dylan's line as received, holding \"(<ask id>): <letter>.\""}),
+        (("--effect",), {"required": True, "help": 'one sentence starting "Effect:"'}))
+    cmd("close", cmd_close, "close an item, done or dropped", (("id",), {}), (("outcome",), {}),
+        (("--note",), {"help": "done: a report path or PR link; dropped: the reason"}), *proof)
+    cmd("mine", cmd_mine, "your open items, at most 15 lines", (("--all",), {"action": "store_true"}))
+    cmd("stale", cmd_stale, "a team's stale open items", (("--team",), {}))
+    cmd("show", cmd_show, "one item in full", (("id",), {}))
+    cmd("brief", cmd_brief, "write a worker's brief; create or reuse its child item",
+        (("worker",), {"help": "file: <day>-<worker>-brief.md; clashes add -2, -3"}),
+        (("--item",), {"required": True, "help": "creates a child, or reuses a child; keeps owner and status"}), (("--title",), {}))
+    cmd("ask", cmd_ask, "an item for another agent, in your folder", (("agent",), {}), (("what",), {}), (("--next",), {}),
+        parent, link)
+    a = ap.parse_args()
+    for k in ("proof", "stands", "nothing_to_prove") + (("owner",) if a.cmd == "move" else ()):  # each is one line
+        if getattr(a, k, None):
+            setattr(a, k, " ".join(getattr(a, k).split()))
+    try:
+        s = structure()
+        who = caller(a) if a.cmd not in ("stale", "show") or a.as_ else None
+        team = my_team(s) if a.cmd not in ("show",) and not (a.cmd == "stale" and a.team) else None
+        a.fn(s, a, who, team)
+    except (Refuse, OSError) as e:
+        sys.exit(f"work: refused: {e}")
+
+
+main()

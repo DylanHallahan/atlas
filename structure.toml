@@ -1,0 +1,307 @@
+# Atlas structure file, draft 1. Kept by atlas-lead.
+# Declared, not inferred. Read from the playbooks on 2026-10-30 3:07 PM ET (19:07 UTC):
+# ~/teams/CLAUDE.md, ~/teams/OPERATIONS.md, ~/teams/chief/CLAUDE.md, ~/teams/{atlas,orion}/CLAUDE.md,
+# /data/herdr/team.md, ~/herdr-forecast/forecast-lead/CLAUDE.md, ~/herdr/*-agent/ playbooks.
+# Goes into the repo verbatim; changes after that come by PR from atlas-lead.
+# kind is one of: chief, team-lead, product-lead, engineering-lead, design-lead, reviewer, standing.
+
+[teams.chief]
+name = "Chief of staff"
+workspace = ""
+folders = ["~/teams/chief"]
+items = "~/teams/chief/records/items"
+
+[teams.devops]
+name = "DevOps"
+workspace = ""
+folders = ["~/teams/devops"]
+status = "~/teams/devops/STATUS.md"
+decisions = "~/teams/devops/records/decisions.md"
+reports = "~/teams/devops/records/reports"
+items = "~/teams/devops/records/items"
+
+[teams.atlas]
+name = "Atlas"
+workspace = "atlas"
+folders = ["~/teams/atlas"]
+status = "~/teams/atlas/lead/STATUS.md"
+decisions = "~/teams/atlas/records/decisions.md"
+repos = [
+  { name = "atlas", base = "main", paths = ["~/teams/atlas/engineering-lead/atlas"] },
+]
+reports = "~/teams/atlas/records/reports"
+items = "~/teams/atlas/records/items"
+
+[teams.forge]
+name = "Forge"
+workspace = "forge"
+folders = ["/data/herdr"]
+status = "/data/herdr/forge-lead/STATUS.md"
+decisions = "/data/herdr/forge-lead/DECISIONS.md"
+repos = [
+  { name = "orion-forge", base = "dev", paths = ["/data/repos/orion-forge", "/data/repos/orion-forge-runner", "/data/herdr/product-lead/forge-dev"] },
+]
+reports = "/data/reports"
+items = "/data/items"
+
+[teams.forecast]
+name = "Forecast"
+workspace = "forecast"
+folders = ["~/herdr-forecast"]
+status = "~/herdr-forecast/forecast-lead/STATUS.md"
+decisions = "~/herdr-forecast/forecast-lead/DECISIONS.md"
+repos = [
+  { name = "orion-apps", base = "dev", paths = ["~/repos/orion-apps", "~/repos/orion-apps-wt-model-seam", "~/repos/orion-apps-wt-b1-trend", "~/repos/orion-apps-fc-product-docs", "~/repos/orion-apps-wt-sk-keys", "~/repos/orion-apps-wt-forge-studio"] },
+  { name = "Orion-Forecast-Engine", base = "main", paths = ["~/repos/Orion-Forecast-Engine"] },
+]
+reports = "~/herdr-forecast/reports"
+items = "~/herdr-forecast/items"
+
+[teams.orion]
+name = "Data team"
+workspace = "data-team"
+folders = ["~/teams/orion", "~/herdr"]
+status = "~/teams/orion/lead/STATUS.md"
+decisions = "~/teams/orion/records/decisions.md"
+repos = [
+  { name = "Orion-Finance", base = "main", paths = ["~/repos/Orion-Finance"] },
+  { name = "Orion-Dimensions", base = "main", paths = ["~/repos/Orion-Dimensions"] },
+  { name = "Orion-Deals", base = "dev", paths = ["~/repos/Orion-Deals"] },
+  { name = "Astra-Accounts-Payable", base = "dev", paths = ["~/repos/Astra-Accounts-Payable"] },
+  { name = "Astra-Accounts-Receivable", base = "dev", paths = ["~/repos/Astra-Accounts-Receivable"] },
+  { name = "Astra-Operations", base = "dev", paths = ["~/repos/Astra-Operations"] },
+  { name = "Astra-Pulse", base = "dev", paths = ["~/repos/Astra-Pulse"] },
+  { name = "orion-observatory", base = "main", paths = ["~/repos/orion-observatory"] },
+  { name = "orion-apps", base = "dev", paths = ["~/repos/orion-apps", "~/repos/orion-apps-wt-model-seam", "~/repos/orion-apps-wt-b1-trend", "~/repos/orion-apps-fc-product-docs", "~/repos/orion-apps-wt-sk-keys", "~/repos/orion-apps-wt-forge-studio"] },
+]
+reports = "~/vaults/Enterprise/reports"
+items = "~/vaults/Enterprise/items"
+
+[teams.dialtone]
+name = "Dial Tone"
+workspace = "dialtone"
+folders = ["~/teams/dialtone"]
+status = "~/teams/dialtone/lead/STATUS.md"
+decisions = "~/teams/dialtone/records/decisions.md"
+repos = [
+  { name = "orion-apps", base = "dev", paths = ["~/repos/orion-apps"] },
+]
+reports = "~/teams/dialtone/records/reports"
+items = "~/teams/dialtone/records/items"
+
+[teams.finance]
+name = "Finance"
+workspace = "finance"
+folders = ["~/teams/finance"]
+status = "~/teams/finance/lead/STATUS.md"
+decisions = "~/teams/finance/records/decisions.md"
+repos = [
+  { name = "orion-apps", base = "dev", paths = ["~/repos/orion-apps"] },
+]
+reports = "~/teams/finance/records/reports"
+items = "~/teams/finance/records/items"
+
+[teams.integration]
+name = "Systems integration"
+workspace = "integration"
+folders = ["~/teams/integration"]
+status = "~/teams/integration/lead/STATUS.md"
+decisions = "~/teams/integration/records/decisions.md"
+reports = "~/teams/integration/records/reports"
+items = "~/teams/integration/records/items"
+
+[[agents]]
+name = "chief"
+team = "chief"
+kind = "chief"
+reports_to = ""
+folder = "~/teams/chief"
+
+[[agents]]
+name = "raincli-inbox"
+team = "chief"
+kind = "standing"
+reports_to = "chief"
+folder = "~/herdr/inbox-agent"
+
+[[agents]]
+name = "devops"
+team = "devops"
+kind = "standing"
+reports_to = "chief"
+folder = "~/teams/devops"
+
+[[agents]]
+name = "atlas-lead"
+team = "atlas"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/teams/atlas/lead"
+
+[[agents]]
+name = "atlas-product-lead"
+team = "atlas"
+kind = "product-lead"
+reports_to = "atlas-lead"
+folder = "~/teams/atlas/product-lead"
+
+[[agents]]
+name = "atlas-engineering-lead"
+team = "atlas"
+kind = "engineering-lead"
+reports_to = "atlas-lead"
+folder = "~/teams/atlas/engineering-lead"
+
+[[agents]]
+name = "forge-lead"
+team = "forge"
+kind = "team-lead"
+reports_to = "chief"
+folder = "/data/herdr/forge-lead"
+
+[[agents]]
+name = "forge-product"
+team = "forge"
+kind = "product-lead"
+reports_to = "forge-lead"
+folder = "/data/herdr/product-lead"
+
+[[agents]]
+name = "forge-design"
+team = "forge"
+kind = "design-lead"
+reports_to = "forge-product"
+folder = "/data/herdr/design-lead"
+
+[[agents]]
+name = "forge-engineering"
+team = "forge"
+kind = "engineering-lead"
+reports_to = "forge-product"
+folder = "/data/herdr/engineering-lead"
+
+[[agents]]
+name = "forecast-lead"
+team = "forecast"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/herdr-forecast/forecast-lead"
+
+[[agents]]
+name = "forecast-product"
+team = "forecast"
+kind = "product-lead"
+reports_to = "forecast-lead"
+folder = "~/herdr-forecast/product-lead"
+
+[[agents]]
+name = "forecast-design"
+team = "forecast"
+kind = "design-lead"
+reports_to = "forecast-product"
+folder = "~/herdr-forecast/design-lead"
+
+[[agents]]
+name = "forecast-engineering"
+team = "forecast"
+kind = "engineering-lead"
+reports_to = "forecast-product"
+folder = "~/herdr-forecast/engineering-lead"
+
+[[agents]]
+name = "orion-lead"
+team = "orion"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/teams/orion/lead"
+
+[[agents]]
+name = "orion-engineering"
+team = "orion"
+kind = "engineering-lead"
+reports_to = "orion-lead"
+folder = "~/herdr/engineering-lead"
+
+[[agents]]
+name = "data-review"
+team = "orion"
+kind = "reviewer"
+reports_to = "orion-lead"
+folder = "~/herdr/data-review-agent"
+
+[[agents]]
+name = "code-audit"
+team = "orion"
+kind = "reviewer"
+reports_to = "orion-lead"
+folder = "~/herdr/code-audit-agent"
+
+[[agents]]
+name = "board-sync"
+team = "orion"
+kind = "standing"
+reports_to = "orion-lead"
+folder = "~/herdr/board-sync-agent"
+
+[[agents]]
+name = "dialtone-lead"
+team = "dialtone"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/teams/dialtone/lead"
+
+[[agents]]
+name = "dialtone-product-lead"
+team = "dialtone"
+kind = "product-lead"
+reports_to = "dialtone-lead"
+folder = "~/teams/dialtone/product-lead"
+
+[[agents]]
+name = "dialtone-engineering-lead"
+team = "dialtone"
+kind = "engineering-lead"
+reports_to = "dialtone-lead"
+folder = "~/teams/dialtone/engineering-lead"
+
+[[agents]]
+name = "finance-lead"
+team = "finance"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/teams/finance/lead"
+
+[[agents]]
+name = "finance-product-lead"
+team = "finance"
+kind = "product-lead"
+reports_to = "finance-lead"
+folder = "~/teams/finance/product-lead"
+
+[[agents]]
+name = "finance-engineering-lead"
+team = "finance"
+kind = "engineering-lead"
+reports_to = "finance-lead"
+folder = "~/teams/finance/engineering-lead"
+
+[[agents]]
+name = "integration-lead"
+team = "integration"
+kind = "team-lead"
+reports_to = "chief"
+folder = "~/teams/integration/lead"
+
+[[agents]]
+name = "integration-product-lead"
+team = "integration"
+kind = "product-lead"
+reports_to = "integration-lead"
+folder = "~/teams/integration/product-lead"
+
+[[agents]]
+name = "integration-engineering-lead"
+team = "integration"
+kind = "engineering-lead"
+reports_to = "integration-lead"
+folder = "~/teams/integration/engineering-lead"

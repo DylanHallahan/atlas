@@ -1,0 +1,21 @@
+# User unit for the dev deploy. Install with: cp deploy/atlas-dev.service ~/.config/systemd/user/
+[Unit]
+Description=Atlas, dev deploy
+
+[Service]
+WorkingDirectory=%h/teams/atlas/deploy-dev
+Environment=ATLAS_PORT=8741
+Environment=ATLAS_DB=%h/teams/atlas/data/atlas-dev.db
+Environment=ATLAS_HERDR=%h/.local/bin/herdr
+Environment=ATLAS_HC=%h/.local/bin/hc
+Environment=ATLAS_RAINCLI=%h/.local/bin/raincli
+Environment=ATLAS_TYPIST=dhallahan-orion@github
+# Stable node IDs (tailscale whois Node.StableID): osg-lap143, iphone-15, omarchy. A rename never changes them.
+Environment=ATLAS_TYPIST_DEVICES=nbAhQVjajK11CNTRL,nX64nCoYA611CNTRL,nKELq8gh1U11CNTRL
+# ATLAS_SERVE_UID is for a check instance only: the deploy refuses to start with it set, so the uid check stays 0.
+ExecStartPre=/usr/bin/test -z "${ATLAS_SERVE_UID}"
+ExecStart=/usr/bin/python3.14 -m atlas
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

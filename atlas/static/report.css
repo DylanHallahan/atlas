@@ -1,0 +1,274 @@
+/* Atlas: the ask page, the change page and the list of changes, in style A after the prototypes
+   (mocks/ask-same-trade.html, change-pr28.html). The tokens, bar, fonts and code come from home.css. */
+.bar .crumb { color: var(--ink-3); font-size: 14px; }
+.doc { max-width: 760px; padding: 24px 24px 96px; }
+.doc h1 { margin: 14px 0 0; font: 600 30px/1.2 var(--sans); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.doc h2 { margin: 36px 0 12px; font-size: 13px; font-weight: 500; color: var(--ink-3); letter-spacing: .01em; }
+.doc .foot { margin-top: 40px; text-align: left; }
+.kicker { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--ink-3); }
+.kicker .who, .change-row .who { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; color: var(--ink-2); }
+.kicker .who i, .change-row .who i { width: 9px; height: 9px; border-radius: 50%; background: var(--tc); }
+.kicker .wait { color: var(--clay); font-weight: 500; }
+.kicker a { color: var(--ink-3); }
+.lede { margin: 12px 0 0; font-size: 17px; color: var(--ink-2); }
+.lede.words > p { margin: 0 0 8px; }
+.gap { color: var(--ink-3); font-style: italic; }
+.mark { color: var(--clay); font-size: 14px; margin: 6px 0 0; }
+.mark[hidden] { display: none; }
+.label { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-bottom: 6px; }
+.label.data { margin-top: 14px; }
+
+/* A label's words: paragraphs, bullets and code as written. */
+.words > p { margin: 0 0 10px; } .words > p:last-child { margin-bottom: 0; }
+.words ul { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 6px; } .words ul:last-child { margin-bottom: 0; }
+.words b { font-weight: 600; }
+.words pre, .not pre { max-width: 100%; margin: 0 0 10px; padding: 12px 14px; border-radius: 12px; background: var(--soft); font: 12px/1.6 var(--mono); overflow-x: auto; white-space: pre; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; }
+.lede + .card { margin-top: 18px; }
+.words + .look { margin-top: 18px; }
+.notice { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--soft); font-size: 14px; color: var(--ink-2); }
+.notice b { color: var(--ink); font-weight: 600; }
+
+/* A table: quiet rules and tabular figures, in its own box that scrolls sideways when wider than the page. */
+.table { max-width: 100%; overflow-x: auto; margin: 0 0 10px; }
+.table:last-child { margin-bottom: 0; }
+.table table { border-collapse: collapse; font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; color: var(--ink); }
+/* Cells break only between words (the page breaks anywhere), so a wide table scrolls instead of crushing a column. */
+.table th, .table td { padding: 7px 16px 7px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: normal; }
+.table td code, .table th code { overflow-wrap: normal; white-space: nowrap; }
+/* A column of words keeps a readable width; the table grows wider and scrolls rather than taller. */
+.table td:not(.r):not(.c), .table th:not(.r):not(.c) { min-width: 6em; }
+.table th { font-size: 12px; font-weight: 500; color: var(--ink-3); white-space: nowrap; } /* a heading on one line */
+.table tr > :last-child { padding-right: 0; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table .r { text-align: right; white-space: nowrap; } .table .c { text-align: center; }
+/* While more of the table lies to the right, its right edge fades, on any background; at the end it does not. */
+.table.scrolls { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+/* Below 640 px each body row is a card, so no figure hides past the edge: its first cell the heading, each other cell
+   a line with its column's heading in ink-3 (data-h, shown as text) and then its value, figures still to the right.
+   The header row and empty cells are left out. At 640 px and wider the table is as above. */
+@media (max-width: 639.98px) {
+  .table table, .table tbody, .table tr { display: block; }
+  .table thead { display: none; }
+  .table tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .table tbody tr:last-child { border-bottom: 0; }
+  .table td { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 12px; padding: 2px 0; border: 0; white-space: normal; overflow-wrap: anywhere; }
+  .table td:not(.r):not(.c) { min-width: 0; }
+  .table td::before { content: attr(data-h); color: var(--ink-3); font-size: 13px; text-align: left; }
+  /* Figures and centred values sit on the right, and a long one wraps there rather than widen the card. */
+  .table td.r > span, .table td.c > span { text-align: right; white-space: normal; }
+  .table td:first-child { display: block; padding-bottom: 4px; font-weight: 500; }
+  .table td:first-child::before { content: none; }
+  .table td:empty { display: none; }
+  .table td code { white-space: normal; overflow-wrap: anywhere; }
+}
+/* A report named under Look at: a quiet path. */
+.path { margin: 0; font-size: 12px; color: var(--ink-3); }
+
+/* The ask */
+.look { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 44px; padding: 10px 18px; border-radius: 14px; background: var(--ink); color: var(--on-ink); text-decoration: none; font-weight: 500; font-size: 15px; margin-top: 14px; }
+.look .btn { margin-top: 0; }
+.btn.ghost { background: var(--soft); color: var(--ink); }
+.options { display: grid; gap: 10px; }
+.opt { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.opt .k { grid-row: span 2; width: 30px; height: 30px; border-radius: 10px; background: var(--soft); display: grid; place-items: center; font-weight: 600; }
+.opt .t { font-weight: 600; font-size: 16px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.opt .words { font-size: 14px; color: var(--ink-2); }
+.tag { font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 999px; background: var(--soft); color: var(--ink-2); }
+.tag.rec { background: color-mix(in srgb, var(--green) 14%, var(--card)); color: var(--green); }
+.opt .undo-row { grid-column: 2; margin-top: 6px; }
+.undo { display: inline-block; font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 10px; background: var(--soft); color: var(--ink-2); overflow-wrap: anywhere; }
+.undo.hard { background: var(--clay-soft); color: var(--clay); }
+.rec-box { background: color-mix(in srgb, var(--green) 10%, var(--bg)); border-radius: 18px; padding: 16px 18px; font-size: 16px; }
+
+/* Reply to <lead>, for Dylan only (type.js): the fixed prefix, his words, Send; off and saying why when the lead
+   cannot take it; after a send, when, and what was sent. */
+.reply { display: grid; gap: 10px; }
+.reply-prefix { margin: 0; color: var(--ink-2); font-size: 14px; }
+.reply textarea { box-sizing: border-box; width: 100%; min-height: 88px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); resize: vertical; }
+.reply textarea:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+.reply textarea:disabled, .reply .btn:disabled { opacity: .5; cursor: not-allowed; }
+.reply .btn { margin-top: 0; border: 0; cursor: pointer; font-family: var(--sans); }
+.reply-off { margin: 0; color: var(--clay); font-size: 14px; }
+.reply-msg { margin: 0; font-size: 14px; color: var(--ink-2); }
+.reply-msg:empty { display: none; }
+.reply-msg.is-warn { color: var(--clay); }
+.reply-msg.is-quiet { color: var(--ink-3); }
+.reply-sent p { margin: 0 0 6px; color: var(--ink); font-weight: 500; }
+.reply-sent blockquote { margin: 0; padding: 10px 12px; border-left: 2px solid var(--line); color: var(--ink-2); overflow-wrap: anywhere; }
+
+/* The change: "Not checked" apart, in clay; the screens full width, one above the other. */
+.not { margin-top: 10px; background: var(--clay-soft); border-radius: 18px; padding: 16px 18px; color: var(--ink); }
+.not .label { color: var(--clay); }
+.not > p { margin: 0 0 8px; } .not > p:last-child { margin: 0; }
+.not ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.code-list ul { padding-left: 18px; }
+.shots { display: grid; gap: 18px; }
+.shot { margin: 0; }
+/* A frame no taller than about 70% of the window, cut from the top; a tap opens the whole image. */
+.shot .frame { display: block; width: fit-content; max-width: 100%; max-height: 70vh; overflow: hidden; border-radius: 14px; border: 1px solid var(--line); background: var(--card); position: relative; }
+.shot .frame.cut::after { content: ""; position: absolute; inset: auto 0 0; height: 48px; background: linear-gradient(transparent, color-mix(in srgb, var(--card) 85%, transparent)); }
+.shot .frame:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+.shot img { display: block; max-width: 100%; height: auto; } /* never wider than its own pixels */
+.shot figcaption { margin-top: 6px; font-size: 12px; color: var(--ink-3); }
+.shot figcaption b { color: var(--ink); font-weight: 500; }
+.shot > .gap { margin: 0; padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--line); font-size: 14px; }
+
+/* The list of changes */
+.lede a { color: var(--ink-3); font-size: 14px; }
+.rows { padding: 0; overflow: hidden; }
+.change-row { display: grid; gap: 4px; padding: 14px 20px; border-top: 1px solid var(--line); text-decoration: none; color: var(--ink); min-height: 44px; }
+.change-row:first-child { border-top: 0; }
+.change-row:hover { background: var(--hover); }
+.change-row:focus-visible { outline: 2px solid var(--clay); outline-offset: -2px; }
+.change-row .top { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-3); }
+.change-row time { font-variant-numeric: tabular-nums; }
+.change-row .what { font-size: 15px; }
+.rows > .quiet { margin: 0; padding: 16px 20px; }
+
+@media (max-width: 640px) {
+  .bar .crumb { display: none; }
+  .doc { padding: 16px 16px 72px; }
+  .doc h1 { font-size: 25px; } .lede { font-size: 16px; }
+  .btn { width: 100%; }
+  .change-row { padding: 14px 16px; }
+}
+
+/* Your answer (type.js answerBox): the picks, the note, the line shown, Send, and the state under it. */
+.answer textarea { box-sizing: border-box; width: 100%; min-height: 64px; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: 16px/1.5 var(--sans); background: var(--bg); color: var(--ink); resize: vertical; }
+.answer textarea:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+.answer textarea[hidden], .answer .lbl[hidden], .answer .line[hidden], .landed[hidden] { display: none; }
+.answer textarea:disabled, .answer input:disabled { opacity: .5; cursor: not-allowed; }
+.answer .lbl { font-size: 12px; color: var(--ink-3); margin-top: 12px; }
+.answer .options + .lbl { margin-top: 16px; }
+.answer .line { white-space: pre-wrap; margin-top: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--soft); border-radius: 10px; padding: 8px 10px; color: var(--ink-2); overflow-wrap: anywhere; }
+.answer .go { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.answer .go button { font: 500 15px var(--sans); padding: 10px 20px; border-radius: 999px; border: 0; background: var(--ink); color: var(--on-ink); cursor: pointer; min-height: 44px; }
+.answer .go button:disabled { opacity: .4; cursor: default; }
+.answer .go span { font-size: 13px; color: var(--ink-3); }
+.answer .reply-msg, .answer .reply-off { margin-top: 10px; }
+.landed { margin-top: 12px; border-radius: 12px; padding: 10px 14px; font-weight: 500; overflow-wrap: anywhere; }
+.landed small { display: block; font-weight: 400; color: var(--ink-2); margin-top: 2px; }
+.landed .btn { margin-top: 10px; }
+.landed.sent { background: var(--soft); }
+.landed.ok { background: color-mix(in srgb, var(--green) 14%, var(--card)); color: var(--green); }
+.landed.late { background: var(--clay-soft); color: var(--clay); }
+.landed.late small { color: var(--ink-2); }
+label.opt { cursor: pointer; grid-template-columns: 18px 34px minmax(0, 1fr); }
+label.opt .undo-row { grid-column: 3; }
+label.opt.other .undo-row { grid-column: 2; }
+label.opt > input[type=radio] { grid-row: span 2; align-self: start; margin: 5px 0 0; accent-color: var(--ink); }
+label.opt.other { grid-template-columns: 18px minmax(0, 1fr); }
+label.opt.other textarea { grid-column: 2; }
+label.opt small { color: var(--ink-3); font-weight: 400; }
+.opt.chosen { outline: 2px solid var(--ink); outline-offset: -1px; }
+.goes { margin: 10px 0 12px; font-size: 14px; font-weight: 500; color: var(--clay); }
+
+/* The data part of a Story page: Mermaid on wide screens, the original cards on phones, and schema changes. */
+:root { --wire: #cfcabd; }
+@media (prefers-color-scheme: dark) { :root { --wire: #57554f; } }
+.lin { position: relative; left: 50%; transform: translateX(-50%); width: min(1040px, calc(100vw - 48px)); overflow: hidden; padding: 18px 12px; text-align: center; }
+.lin[hidden], .lin-cards[hidden] { display: none; }
+.lin svg { display: block; max-width: 100%; height: auto; margin: auto; }
+.lin .label { font-size: 15px; color: var(--ink); margin: 0; }
+.lin small { font-size: inherit; }
+.lin .nodeLabel { overflow-wrap: normal; word-break: normal; white-space: normal; }
+.wire { fill: none; stroke: var(--wire); stroke-width: 1.4; }
+.head { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.pm .k { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.pm.is-changed { border: 1.5px solid var(--clay); } .pm.is-changed .k { color: var(--clay); font-weight: 500; }
+.pm.is-new { border: 1.5px solid var(--green); } .pm.is-new .k { color: var(--green); font-weight: 500; }
+.pm.is-removed { border: 1.5px dashed var(--clay); } .pm.is-removed .k { color: var(--clay); font-weight: 500; }
+.lin-cards { display: grid; gap: 10px; }
+.pm { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--card); }
+.pm .n { font: 13px/1.4 var(--mono); background: none; padding: 0; }
+.pm .lbl { font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+.pm ul { margin: 4px 0 0; padding-left: 16px; font: 12px/1.5 var(--mono); color: var(--ink-2); }
+.pm li code { background: none; padding: 0; font-size: 12px; }
+.legend span { white-space: nowrap; } .legend span:last-child { white-space: normal; }
+.legend { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; font-size: 12px; color: var(--ink-3); margin-top: 10px; }
+.legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1.5px solid var(--line); }
+.legend b.is-changed { border-color: var(--clay); } .legend b.is-new { border-color: var(--green); } .legend b.is-removed { border: 1.5px dashed var(--clay); } .legend b.is-source { background: var(--soft); }
+.sch { margin-top: 12px; }
+.sch .n { font: 13px/1.4 var(--mono); background: none; padding: 0; }
+.sch .kindtag { margin-left: 8px; font-size: 12px; color: var(--ink-3); } .sch .kindtag.is-changed, .sch .kindtag.is-removed { color: var(--clay); } .sch .kindtag.is-new { color: var(--green); }
+.sch .note, .note { font-size: 13px; color: var(--ink-2); margin: 8px 0 0; }
+.sch .gap { margin: 8px 0 0; }
+.sch table { width: 100%; margin-top: 8px; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.sch th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-3); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); }
+.sch td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sch td code { background: none; padding: 0; font-size: 12px; }
+.sch td.rem { color: var(--clay); text-decoration: line-through; } .sch td.add { color: var(--green); }
+.flows { display: grid; gap: 14px; justify-items: start; }
+.flow { display: grid; justify-items: start; gap: 0; max-width: 100%; }
+.tbl { max-width: 100%; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--soft); font-size: 13px; }
+.flow .down { margin-left: 16px; }
+
+/* Ask stepping uses the page's width, below the bar, with the same focus ring as the tabs. */
+.ask-stepper { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin: -12px 0 22px; color: var(--ink-3); font-size: 13px; }
+.ask-stepper span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ask-stepper button { justify-self: start; min-height: 38px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
+.ask-stepper button:first-child { margin-left: -10px; }
+.ask-stepper button:last-child { grid-column: 3; justify-self: end; margin-right: -10px; }
+.ask-stepper button:hover:not(:disabled) { background: var(--soft); }
+.ask-stepper button:disabled { opacity: .4; cursor: default; }
+.ask-sent { margin: 14px 0 8px; font-size: 13px; color: var(--ink-2); }
+.answer-done p { margin: 0 0 12px; }
+.answer-done .answer-done-detail, .answer-done a { color: var(--ink-3); }
+
+/* Screenshots at a glance on an ask: thumbnails first in Context, 160 px tall (120 on a phone); a caption of two lines. */
+.strip { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+.thumb { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 160px; padding: 0; margin: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: zoom-in; max-width: 100%; }
+.thumb img { display: block; height: 160px; width: auto; max-width: 100%; object-fit: cover; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.thumb:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 14px; }
+/* The caption takes the picture's width, or 160 px for a narrow phone picture (which stays at the left of its slot). */
+.tcap { width: 0; min-width: 100%; font-size: 12px; line-height: 1.4; color: var(--ink-3); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* The viewer: dark in both themes. A bar (44 px targets), the stage the image moves on (one transform), the caption under. */
+.lightbox { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: #141311; color: #f4f1e8; touch-action: none; overscroll-behavior: contain; animation: lb-in var(--dur-1) var(--ease-out); }
+.lb-bar { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 6px 12px; }
+.lb-count { margin-right: auto; font-size: 14px; }
+.lb-bar button { min-width: 44px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; font-size: 15px; cursor: pointer; }
+.lb-bar button:hover:not(:disabled) { background: rgba(244, 241, 232, 0.12); }
+.lb-bar button:disabled { opacity: 0.35; cursor: default; }
+.lb-bar button:focus-visible { outline: 2px solid var(--clay); outline-offset: -2px; }
+.lb-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; cursor: zoom-in; user-select: none; }
+.lb-stage.zoomed { cursor: grab; }
+.lb-stage.zoomed:active { cursor: grabbing; }
+.lb-stage img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; border-radius: 14px; background: var(--card); -webkit-user-drag: none; will-change: transform; }
+.lb-stage img.easing { transition: transform var(--dur-2) var(--ease-out); }
+.lb-cap { flex: none; margin: 0 auto; padding: 8px 16px 14px; max-width: 640px; text-align: center; font-size: 14px; }
+@keyframes lb-in { from { opacity: 0; } }
+@media (max-width: 640px) {
+  .strip { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; }
+  .thumb { flex: none; }
+  .thumb img { height: 120px; }
+}
+
+/* Motion: a step from one ask to the next slides the page body 8 px and fades it, towards the old side; the bar and tabs stay. */
+.answer .go button, .ask-stepper button { transition: background-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+@media (prefers-reduced-motion: no-preference) {
+  .is-ask #doc { view-transition-name: ask-body; }
+  :root { --s: 8px; }
+  :root:active-view-transition-type(back) { --s: -8px; }
+  ::view-transition-group(ask-body) { animation-duration: var(--dur-2); animation-timing-function: var(--ease-out); }
+  ::view-transition-old(ask-body) { animation: out var(--dur-2) var(--ease-out) both; }
+  ::view-transition-new(ask-body) { animation: in var(--dur-2) var(--ease-out) both; }
+  ::view-transition-old(ask-body):only-child, ::view-transition-new(ask-body):only-child { animation: none; }
+  ::view-transition-old(ask-body):only-child { display: none; }
+}
+@keyframes out { to { opacity: 0; transform: translateX(calc(var(--s) * -1)); } }
+@keyframes in { from { opacity: 0; transform: translateX(var(--s)); } }
+
+/* Screenshots pasted or dropped into the answer: thumbnails about 96 px tall with a quiet Remove, a dashed edge while dragging. */
+.answer.is-drop { outline: 1.5px dashed var(--clay); outline-offset: 8px; border-radius: 14px; }
+.pics { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.pics:empty { display: none; }
+.pic { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 100%; }
+.pic img { display: block; height: 96px; width: auto; max-width: 100%; object-fit: cover; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.pic-rm { padding: 4px 0; min-height: 28px; border: 0; background: none; color: var(--ink-3); font: inherit; font-size: 12px; cursor: pointer; }
+.pic-rm:hover { text-decoration: underline; }
+.pic-rm:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+.quiet { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); }
+.quiet:empty { display: none; }
+.landed .strip { margin: 10px 0 0; }

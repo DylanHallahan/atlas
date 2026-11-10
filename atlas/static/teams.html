@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Org chart</title>
+<link rel="stylesheet" href="/static/home.css">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/poll.js" defer></script>
+<script src="/static/app.js" defer></script>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+<!-- The home page's bar, the heading and one summary line, then the chart (app.js). -->
+<header class="bar"><span class="brand"><img src="/static/globe.svg" alt="" width="22" height="22">Atlas</span><nav class="tabs" aria-label="Pages"><a href="/">Home</a><a href="/standup">Stand-up</a><a href="/office" aria-current="page">Org chart</a><a href="/agents">Agents</a><a href="/teams">Teams</a><a href="/review">Review</a><a href="/usage">Usage</a><a href="/work">Work</a></nav><span class="live" id="live" role="status"></span></header>
+<main class="org">
+  <div class="org-head"><h1>Org chart</h1><p id="sum"></p></div>
+  <div class="chart" id="chart" aria-label="Teams"></div>
+  <footer class="foot" id="foot"></footer>
+</main>
+</body>
+</html>
